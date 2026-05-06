@@ -198,10 +198,6 @@ def analyze_url(url):
 # HOME PAGE
 # ===============================
 
-@app.route('/')
-def index():
-    return render_template('index.html')
-
 @app.route('/landing')
 def landing():
     return render_template('landing.html')
