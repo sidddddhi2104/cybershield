@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>PDF Malware Scanner | CyberShield</title>
+
+    <!-- Bootstrap -->
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+          rel="stylesheet">
+
+    <!-- Font Awesome -->
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Main CSS -->
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+</head>
+
+<body>
+
+<!-- NAVBAR -->
+
+<nav class="navbar navbar-expand-lg navbar-dark cyber-nav">
+
+    <div class="container">
+
+        <a class="navbar-brand glow-text"
+           href="/dashboard">
+
+            <i class="fa-solid fa-shield-halved"></i>
+            CyberShield
+
+        </a>
+
+        <div>
+
+            <a href="/dashboard"
+               class="btn btn-outline-light">
+
+                Dashboard
+
+            </a>
+
+        </div>
+
+    </div>
+
+</nav>
+
+<!-- MAIN SECTION -->
+
+<section class="scanner-section">
+
+    <div class="container">
+
+        <div class="scanner-box">
+
+            <!-- TITLE -->
+
+            <h1 class="glow-text text-center">
+
+                <i class="fa-solid fa-file-pdf"></i>
+                PDF Malware Scanner
+
+            </h1>
+
+            <p class="text-center text-light mt-3">
+
+                Upload PDF documents and analyze them for
+                malicious scripts, embedded threats,
+                suspicious links, and phishing payloads.
+
+            </p>
+
+            <!-- FORM -->
+
+            <form method="POST"
+                  enctype="multipart/form-data"
+                  class="mt-5">
+
+                <input type="file"
+                       name="pdf_file"
+                       accept=".pdf"
+                       class="form-control cyber-input"
+                       required>
+
+                <div class="text-center">
+
+                    <button class="btn btn-cyber mt-4">
+
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        Scan PDF
+
+                    </button>
+
+                </div>
+
+            </form>
+
+            <!-- RESULT -->
+
+            {% if result %}
+
+            <div class="scan-result-card mt-5 text-center">
+
+                <h3 class="glow-text">
+
+                    {{ result }}
+
+                </h3>
+
+            </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</section>
+
+<!-- FOOTER -->
+
+<footer class="footer">
+
+    <div class="container text-center">
+
+        CYBERSHIELD SECURED // PDF THREAT ANALYSIS ACTIVE
+
+    </div>
+
+</footer>
+
+<!-- Bootstrap JS -->
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>
