@@ -15,6 +15,8 @@ import cv2
 app = Flask(__name__)
 app.secret_key = 'cybershield_secret_key'
 
+print("App Starting...")
+
 UPLOAD_FOLDER = "static/uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -23,6 +25,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # ===============================
 
 def get_db():
+
     db = mysql.connector.connect(
         host=os.getenv("MYSQL_ADDON_HOST"),
         user=os.getenv("MYSQL_ADDON_USER"),
@@ -30,9 +33,23 @@ def get_db():
         database=os.getenv("MYSQL_ADDON_DB"),
         port=int(os.getenv("MYSQL_ADDON_PORT", 3306))
     )
+
     return db, db.cursor(dictionary=True)
 
-db, cursor = get_db()
+try:
+
+    db, cursor = get_db()
+
+    print("Database Connected Successfully")
+
+except Exception as e:
+
+    print("Database Connection Error:", e)
+
+    db = None
+    cursor = None
+
+print("DB Setup Complete")
 
 # ===============================
 # OCR FUNCTION
@@ -41,7 +58,11 @@ db, cursor = get_db()
 def extract_text(image_path):
 
     try:
+
         img = cv2.imread(image_path)
+
+        if img is None:
+            return "Unable to read image"
 
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
@@ -57,6 +78,7 @@ def extract_text(image_path):
         return text
 
     except Exception as e:
+
         return f"OCR Error: {str(e)}"
 
 # ===============================
@@ -119,29 +141,38 @@ def analyze_url(url):
         reasons.append("URL length is unusually long")
 
     for keyword in phishing_keywords:
+
         if keyword.lower() in url.lower():
+
             score -= 10
             reasons.append(f"Suspicious keyword detected: {keyword}")
 
     for tld in suspicious_tlds:
+
         if tld in url:
+
             score -= 15
             reasons.append(f"Suspicious domain extension detected: {tld}")
 
     for bad in blacklist:
+
         if bad in url:
+
             score -= 40
             reasons.append("Website found in phishing blacklist")
 
     if score >= 75:
+
         status = "Safe"
         color = "success"
 
     elif score >= 45:
+
         status = "Warning"
         color = "warning"
 
     else:
+
         status = "Dangerous"
         color = "danger"
 
@@ -182,6 +213,9 @@ def landing():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
 
+    if cursor is None:
+        return "Database not connected"
+
     if request.method == 'POST':
 
         name = request.form['name']
@@ -198,6 +232,7 @@ def register():
         existing_user = cursor.fetchone()
 
         if existing_user:
+
             flash("Email already exists", "danger")
             return redirect('/register')
 
@@ -223,6 +258,9 @@ def register():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+
+    if cursor is None:
+        return "Database not connected"
 
     if request.method == 'POST':
 
@@ -252,6 +290,7 @@ def login():
             return redirect('/dashboard')
 
         else:
+
             flash("Invalid Email or Password", "danger")
             return redirect('/login')
 
@@ -276,6 +315,9 @@ def logout():
 
 @app.route('/dashboard')
 def dashboard():
+
+    if cursor is None:
+        return "Database not connected"
 
     if 'loggedin' not in session:
         return redirect('/login')
@@ -313,6 +355,9 @@ def scanner():
 @app.route('/scan_url', methods=['POST'])
 def scan_url():
 
+    if cursor is None:
+        return jsonify({"error": "Database not connected"})
+
     if 'loggedin' not in session:
         return jsonify({"error": "Unauthorized"})
 
@@ -346,6 +391,9 @@ def scan_url():
 @app.route('/reports')
 def reports():
 
+    if cursor is None:
+        return "Database not connected"
+
     if 'loggedin' not in session:
         return redirect('/login')
 
@@ -377,6 +425,9 @@ def awareness():
 @app.route('/contact', methods=['GET', 'POST'])
 def contact():
 
+    if cursor is None:
+        return "Database not connected"
+
     if request.method == 'POST':
 
         name = request.form['name']
@@ -405,6 +456,9 @@ def contact():
 
 @app.route('/admin')
 def admin():
+
+    if cursor is None:
+        return "Database not connected"
 
     if 'loggedin' not in session:
         return redirect('/login')
@@ -436,6 +490,9 @@ def admin():
 
 @app.route('/delete_report/<int:id>')
 def delete_report(id):
+
+    if cursor is None:
+        return "Database not connected"
 
     if 'loggedin' not in session:
         return redirect('/login')
@@ -608,6 +665,7 @@ def qr_scanner():
     if request.method == 'POST':
 
         try:
+
             from pyzbar.pyzbar import decode
 
             qr_image = request.files['qr_image']
@@ -639,9 +697,11 @@ def qr_scanner():
                 )
 
             else:
+
                 result = "No QR Code Detected"
 
         except Exception as e:
+
             result = f"QR Error: {str(e)}"
 
     return render_template(
@@ -651,14 +711,13 @@ def qr_scanner():
     )
 
 # ===============================
-# EMAIL PHISHING DETECTOR
+# EMAIL SCANNER
 # ===============================
 
 @app.route('/email_scanner', methods=['GET', 'POST'])
 def email_scanner():
 
     result = None
-
     detected = []
 
     if request.method == 'POST':
@@ -717,4 +776,10 @@ def email_scanner():
 # ===============================
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+
+    port = int(os.environ.get("PORT", 5000))
+
+    app.run(
+        host='0.0.0.0',
+        port=port
+    )
