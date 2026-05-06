@@ -36,16 +36,20 @@ app.secret_key = 'cybershield_secret_key'
 # MYSQL DATABASE CONFIGURATION
 # ===============================
 import os
+import mysql.connector
 
 try:
     db = mysql.connector.connect(
-        host=os.getenv("DB_HOST"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        database=os.getenv("DB_NAME"),
-        port=int(os.getenv("DB_PORT", 3306))
+        host=os.getenv("MYSQL_ADDON_HOST"),
+        user=os.getenv("MYSQL_ADDON_USER"),
+        password=os.getenv("MYSQL_ADDON_PASSWORD"),
+        database=os.getenv("MYSQL_ADDON_DB"),
+        port=int(os.getenv("MYSQL_ADDON_PORT", 3306))
     )
+
     cursor = db.cursor(dictionary=True)
+    print("Database connected successfully!")
+
 except Exception as e:
     print("Database connection failed:", e)
 # ===============================
