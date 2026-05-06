@@ -24,32 +24,17 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # MYSQL DATABASE CONFIGURATION
 # ===============================
 
-# ===============================
-# MYSQL DATABASE CONFIGURATION
-# ===============================
-
 db = None
 cursor = None
 
 try:
 
-    host = os.getenv("DB_HOST")
-    user = os.getenv("DB_USER")
-    password = os.getenv("DB_PASSWORD")
-    database = os.getenv("DB_NAME")
-    port = os.getenv("DB_PORT")
-
-    print("HOST:", host)
-    print("USER:", user)
-    print("DB:", database)
-    print("PORT:", port)
-
     db = mysql.connector.connect(
-        host=host,
-        user=user,
-        password=password,
-        database=database,
-        port=int(port)
+        host=os.getenv("DB_HOST"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        database=os.getenv("DB_NAME"),
+        port=int(os.getenv("DB_PORT", 3306))
     )
 
     cursor = db.cursor(dictionary=True)
@@ -57,6 +42,7 @@ try:
     print("Database Connected Successfully")
 
 except Exception as e:
+
     print("Database Connection Error:", e)
 # ===============================
 # OCR FUNCTION
@@ -267,6 +253,9 @@ def register():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
 
+    if db is None or cursor is None:
+        return "Database not connected"
+    
     if cursor is None:
         return "Database not connected"
 
