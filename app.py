@@ -24,26 +24,30 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # MYSQL DATABASE CONFIGURATION
 # ===============================
 
-db = None
-cursor = None
+# ===============================
+# MYSQL DATABASE CONFIGURATION
+# ===============================
 
-try:
+def get_db_connection():
 
-    db = mysql.connector.connect(
-        host=os.getenv("DB_HOST"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        database=os.getenv("DB_NAME"),
-        port=int(os.getenv("DB_PORT", 3306))
-    )
+    try:
 
-    cursor = db.cursor(dictionary=True)
+        connection = mysql.connector.connect(
+            host=os.getenv("DB_HOST"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            database=os.getenv("DB_NAME"),
+            port=int(os.getenv("DB_PORT", 3306)),
+            connection_timeout=30
+        )
 
-    print("Database Connected Successfully")
+        return connection
 
-except Exception as e:
+    except Exception as e:
 
-    print("Database Connection Error:", e)
+        print("Database Connection Error:", e)
+
+        return None
 # ===============================
 # OCR FUNCTION
 # ===============================
@@ -207,10 +211,14 @@ def landing():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
 
-    if cursor is None:
-        return "Database not connected"
-
     if request.method == 'POST':
+
+        db = get_db_connection()
+
+        if db is None:
+            return "Database Connection Failed"
+
+        cursor = db.cursor(dictionary=True)
 
         name = request.form['name']
         email = request.form['email']
@@ -227,6 +235,9 @@ def register():
 
         if existing_user:
 
+            cursor.close()
+            db.close()
+
             flash("Email already exists", "danger")
             return redirect('/register')
 
@@ -239,6 +250,9 @@ def register():
 
         cursor.execute(sql, values)
         db.commit()
+
+        cursor.close()
+        db.close()
 
         flash("Registration Successful", "success")
 
@@ -253,13 +267,14 @@ def register():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
 
-    if db is None or cursor is None:
-        return "Database not connected"
-    
-    if cursor is None:
-        return "Database not connected"
-
     if request.method == 'POST':
+
+        db = get_db_connection()
+
+        if db is None:
+            return "Database Connection Failed"
+
+        cursor = db.cursor(dictionary=True)
 
         email = request.form['email']
         password = request.form['password']
@@ -270,6 +285,9 @@ def login():
         )
 
         user = cursor.fetchone()
+
+        cursor.close()
+        db.close()
 
         if user and check_password_hash(user['password'], password):
 
@@ -313,11 +331,15 @@ def logout():
 @app.route('/dashboard')
 def dashboard():
 
-    if cursor is None:
-        return "Database not connected"
-
     if 'loggedin' not in session:
         return redirect('/login')
+
+    db = get_db_connection()
+
+    if db is None:
+        return "Database not connected"
+
+    cursor = db.cursor(dictionary=True)
 
     user_id = session['id']
 
@@ -327,6 +349,9 @@ def dashboard():
     )
 
     total_scans = cursor.fetchone()['total']
+
+    cursor.close()
+    db.close()
 
     return render_template(
         'dashboard.html',
@@ -352,11 +377,15 @@ def scanner():
 @app.route('/scan_url', methods=['POST'])
 def scan_url():
 
-    if cursor is None:
-        return jsonify({"error": "Database not connected"})
-
     if 'loggedin' not in session:
         return jsonify({"error": "Unauthorized"})
+
+    db = get_db_connection()
+
+    if db is None:
+        return jsonify({"error": "Database not connected"})
+
+    cursor = db.cursor(dictionary=True)
 
     data = request.get_json()
 
@@ -379,6 +408,9 @@ def scan_url():
     cursor.execute(sql, values)
     db.commit()
 
+    cursor.close()
+    db.close()
+
     return jsonify(result)
 
 # ===============================
@@ -388,11 +420,15 @@ def scan_url():
 @app.route('/reports')
 def reports():
 
-    if cursor is None:
-        return "Database not connected"
-
     if 'loggedin' not in session:
         return redirect('/login')
+
+    db = get_db_connection()
+
+    if db is None:
+        return "Database not connected"
+
+    cursor = db.cursor(dictionary=True)
 
     cursor.execute("""
         SELECT * FROM scan_reports
@@ -401,6 +437,9 @@ def reports():
     """, (session['id'],))
 
     reports = cursor.fetchall()
+
+    cursor.close()
+    db.close()
 
     return render_template(
         'reports.html',
@@ -422,10 +461,14 @@ def awareness():
 @app.route('/contact', methods=['GET', 'POST'])
 def contact():
 
-    if cursor is None:
-        return "Database not connected"
-
     if request.method == 'POST':
+
+        db = get_db_connection()
+
+        if db is None:
+            return "Database not connected"
+
+        cursor = db.cursor(dictionary=True)
 
         name = request.form['name']
         email = request.form['email']
@@ -441,6 +484,9 @@ def contact():
         cursor.execute(sql, values)
         db.commit()
 
+        cursor.close()
+        db.close()
+
         flash("Report submitted successfully", "success")
 
         return redirect('/contact')
@@ -454,14 +500,18 @@ def contact():
 @app.route('/admin')
 def admin():
 
-    if cursor is None:
-        return "Database not connected"
-
     if 'loggedin' not in session:
         return redirect('/login')
 
     if session['role'] != 'admin':
         return redirect('/dashboard')
+
+    db = get_db_connection()
+
+    if db is None:
+        return "Database not connected"
+
+    cursor = db.cursor(dictionary=True)
 
     cursor.execute("SELECT * FROM users")
     users = cursor.fetchall()
@@ -474,6 +524,9 @@ def admin():
     """)
 
     reports = cursor.fetchall()
+
+    cursor.close()
+    db.close()
 
     return render_template(
         'admin.html',
@@ -488,11 +541,15 @@ def admin():
 @app.route('/delete_report/<int:id>')
 def delete_report(id):
 
-    if cursor is None:
-        return "Database not connected"
-
     if 'loggedin' not in session:
         return redirect('/login')
+
+    db = get_db_connection()
+
+    if db is None:
+        return "Database not connected"
+
+    cursor = db.cursor(dictionary=True)
 
     cursor.execute(
         "DELETE FROM scan_reports WHERE id=%s",
@@ -500,6 +557,9 @@ def delete_report(id):
     )
 
     db.commit()
+
+    cursor.close()
+    db.close()
 
     flash("Report Deleted", "warning")
 
