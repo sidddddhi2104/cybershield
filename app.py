@@ -1,42 +1,26 @@
 from flask import Flask, render_template, request, redirect, session, flash, jsonify
 import mysql.connector
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
 from PyPDF2 import PdfReader
-import re
 from PIL import Image
 import pytesseract
-from pyzbar.pyzbar import decode
-from PIL import Image
 import os
 import re
-import pytesseract
-
 import cv2
-import pytesseract
-UPLOAD_FOLDER = "static/uploads"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-def extract_text(image_path):
-    img = cv2.imread(image_path)
+# ===============================
+# APP CONFIG
+# ===============================
 
-    # Convert to grayscale
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-    # Improve clarity
-    gray = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)[1]
-
-    text = pytesseract.image_to_string(gray)
-
-    return text
 app = Flask(__name__)
 app.secret_key = 'cybershield_secret_key'
+
+UPLOAD_FOLDER = "static/uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # ===============================
 # MYSQL DATABASE CONFIGURATION
 # ===============================
-import mysql.connector
-import os
 
 def get_db():
     db = mysql.connector.connect(
@@ -47,9 +31,38 @@ def get_db():
         port=int(os.getenv("MYSQL_ADDON_PORT", 3306))
     )
     return db, db.cursor(dictionary=True)
+
+db, cursor = get_db()
+
 # ===============================
-# URL SCANNING FUNCTION
+# OCR FUNCTION
 # ===============================
+
+def extract_text(image_path):
+
+    try:
+        img = cv2.imread(image_path)
+
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+        gray = cv2.threshold(
+            gray,
+            150,
+            255,
+            cv2.THRESH_BINARY
+        )[1]
+
+        text = pytesseract.image_to_string(gray)
+
+        return text
+
+    except Exception as e:
+        return f"OCR Error: {str(e)}"
+
+# ===============================
+# URL ANALYZER
+# ===============================
+
 def analyze_url(url):
 
     score = 100
@@ -85,12 +98,10 @@ def analyze_url(url):
         "phishing-login.ru"
     ]
 
-    # HTTPS CHECK
     if not url.startswith("https://"):
         score -= 20
         reasons.append("Website does not use HTTPS secure protocol")
 
-    # SYMBOL CHECKS
     if "@" in url:
         score -= 15
         reasons.append("URL contains suspicious '@' symbol")
@@ -103,30 +114,25 @@ def analyze_url(url):
         score -= 10
         reasons.append("URL contains suspicious '-' symbol")
 
-    # DOMAIN LENGTH
     if len(url) > 60:
         score -= 10
         reasons.append("URL length is unusually long")
 
-    # KEYWORD DETECTION
     for keyword in phishing_keywords:
         if keyword.lower() in url.lower():
             score -= 10
             reasons.append(f"Suspicious keyword detected: {keyword}")
 
-    # TLD CHECK
     for tld in suspicious_tlds:
         if tld in url:
             score -= 15
             reasons.append(f"Suspicious domain extension detected: {tld}")
 
-    # BLACKLIST CHECK
     for bad in blacklist:
         if bad in url:
             score -= 40
             reasons.append("Website found in phishing blacklist")
 
-    # FINAL STATUS
     if score >= 75:
         status = "Safe"
         color = "success"
@@ -160,16 +166,19 @@ def analyze_url(url):
 # ===============================
 # HOME PAGE
 # ===============================
+
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@app.route("/landing")
+@app.route('/landing')
 def landing():
-    return render_template("landing.html")
+    return render_template('landing.html')
+
 # ===============================
 # REGISTER
 # ===============================
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
 
@@ -203,6 +212,7 @@ def register():
         db.commit()
 
         flash("Registration Successful", "success")
+
         return redirect('/login')
 
     return render_template('register.html')
@@ -210,7 +220,6 @@ def register():
 # ===============================
 # LOGIN
 # ===============================
-from flask import redirect, url_for
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -244,16 +253,19 @@ def login():
 
         else:
             flash("Invalid Email or Password", "danger")
-            return redirect('/login')   # 🔥 THIS LINE FIXES YOUR ISSUE
+            return redirect('/login')
 
     return render_template('login.html')
+
 # ===============================
 # LOGOUT
 # ===============================
+
 @app.route('/logout')
 def logout():
 
     session.clear()
+
     flash("Logged out successfully", "info")
 
     return redirect('/')
@@ -261,6 +273,7 @@ def logout():
 # ===============================
 # DASHBOARD
 # ===============================
+
 @app.route('/dashboard')
 def dashboard():
 
@@ -284,6 +297,7 @@ def dashboard():
 # ===============================
 # SCANNER PAGE
 # ===============================
+
 @app.route('/scanner')
 def scanner():
 
@@ -293,8 +307,9 @@ def scanner():
     return render_template('scanner.html')
 
 # ===============================
-# URL SCAN API
+# URL SCANNER API
 # ===============================
+
 @app.route('/scan_url', methods=['POST'])
 def scan_url():
 
@@ -307,7 +322,6 @@ def scan_url():
 
     result = analyze_url(url)
 
-    # SAVE REPORT
     sql = """
     INSERT INTO scan_reports(user_id, url, score, result)
     VALUES(%s, %s, %s, %s)
@@ -328,6 +342,7 @@ def scan_url():
 # ===============================
 # REPORTS PAGE
 # ===============================
+
 @app.route('/reports')
 def reports():
 
@@ -350,6 +365,7 @@ def reports():
 # ===============================
 # AWARENESS PAGE
 # ===============================
+
 @app.route('/awareness')
 def awareness():
     return render_template('awareness.html')
@@ -357,6 +373,7 @@ def awareness():
 # ===============================
 # CONTACT PAGE
 # ===============================
+
 @app.route('/contact', methods=['GET', 'POST'])
 def contact():
 
@@ -385,6 +402,7 @@ def contact():
 # ===============================
 # ADMIN PANEL
 # ===============================
+
 @app.route('/admin')
 def admin():
 
@@ -415,6 +433,7 @@ def admin():
 # ===============================
 # DELETE REPORT
 # ===============================
+
 @app.route('/delete_report/<int:id>')
 def delete_report(id):
 
@@ -431,9 +450,11 @@ def delete_report(id):
     flash("Report Deleted", "warning")
 
     return redirect('/admin')
+
 # ===============================
 # PDF SCANNER
 # ===============================
+
 @app.route('/pdf_scanner', methods=['GET', 'POST'])
 def pdf_scanner():
 
@@ -443,7 +464,10 @@ def pdf_scanner():
 
         pdf_file = request.files['pdf_file']
 
-        filepath = os.path.join(UPLOAD_FOLDER, pdf_file.filename)
+        filepath = os.path.join(
+            UPLOAD_FOLDER,
+            pdf_file.filename
+        )
 
         pdf_file.save(filepath)
 
@@ -452,7 +476,11 @@ def pdf_scanner():
         text = ''
 
         for page in reader.pages:
-            text += page.extract_text()
+
+            extracted = page.extract_text()
+
+            if extracted:
+                text += extracted
 
         suspicious_keywords = [
             'verify account',
@@ -465,6 +493,7 @@ def pdf_scanner():
         detected = []
 
         for word in suspicious_keywords:
+
             if word.lower() in text.lower():
                 detected.append(word)
 
@@ -473,28 +502,33 @@ def pdf_scanner():
         else:
             result = 'PDF Looks Safe'
 
-    return render_template('pdf_scanner.html', result=result)
+    return render_template(
+        'pdf_scanner.html',
+        result=result
+    )
+
 # ===============================
 # IMAGE SCANNER
 # ===============================
+
 @app.route('/image_scanner', methods=['GET', 'POST'])
 def image_scanner():
 
     result = None
-
     extracted_text = ''
 
     if request.method == 'POST':
 
         image = request.files['image']
 
-        filepath = os.path.join(UPLOAD_FOLDER, image.filename)
+        filepath = os.path.join(
+            UPLOAD_FOLDER,
+            image.filename
+        )
 
         image.save(filepath)
 
-        img = Image.open(filepath)
-
-        extracted_text = pytesseract.image_to_string(img)
+        extracted_text = extract_text(filepath)
 
         phishing_words = [
             'bank login',
@@ -504,26 +538,27 @@ def image_scanner():
             'update account'
         ]
 
-        suspicious = False
+        suspicious = any(
+            word in extracted_text.lower()
+            for word in phishing_words
+        )
 
-        for word in phishing_words:
-
-            if word.lower() in extracted_text.lower():
-                suspicious = True
-
-        if suspicious:
-            result = 'Phishing Image Detected'
-        else:
-            result = 'Image Looks Safe'
+        result = (
+            'Phishing Image Detected'
+            if suspicious
+            else 'Image Looks Safe'
+        )
 
     return render_template(
         'image_scanner.html',
         result=result,
         extracted_text=extracted_text
     )
+
 # ===============================
 # SMS SCANNER
 # ===============================
+
 @app.route('/sms_scanner', methods=['GET', 'POST'])
 def sms_scanner():
 
@@ -559,8 +594,9 @@ def sms_scanner():
         'sms_scanner.html',
         result=result
     )
+
 # ===============================
-# QR CODE SCANNER
+# QR SCANNER
 # ===============================
 
 @app.route('/qr_scanner', methods=['GET', 'POST'])
@@ -571,51 +607,49 @@ def qr_scanner():
 
     if request.method == 'POST':
 
-        qr_image = request.files['qr_image']
+        try:
+            from pyzbar.pyzbar import decode
 
-        filepath = os.path.join(UPLOAD_FOLDER, qr_image.filename)
+            qr_image = request.files['qr_image']
 
-        qr_image.save(filepath)
+            filepath = os.path.join(
+                UPLOAD_FOLDER,
+                qr_image.filename
+            )
 
-        img = Image.open(filepath)
+            qr_image.save(filepath)
 
-        decoded_objects = decode(img)
+            img = Image.open(filepath)
 
-        if decoded_objects:
+            decoded_objects = decode(img)
 
-            qr_data = decoded_objects[0].data.decode('utf-8')
+            if decoded_objects:
 
-            suspicious_keywords = [
-                'login',
-                'verify',
-                'bank',
-                'gift',
-                'claim',
-                'free',
-                'wallet'
-            ]
+                qr_data = decoded_objects[0].data.decode('utf-8')
 
-            suspicious = False
+                suspicious = any(
+                    k in qr_data.lower()
+                    for k in ['login', 'verify', 'bank', 'gift']
+                )
 
-            for keyword in suspicious_keywords:
-
-                if keyword.lower() in qr_data.lower():
-                    suspicious = True
-
-            if suspicious:
-                result = "Suspicious QR Code Detected"
+                result = (
+                    "Suspicious QR Code Detected"
+                    if suspicious
+                    else "QR Code Looks Safe"
+                )
 
             else:
-                result = "QR Code Looks Safe"
+                result = "No QR Code Detected"
 
-        else:
-            result = "No QR Code Detected"
+        except Exception as e:
+            result = f"QR Error: {str(e)}"
 
     return render_template(
         'qr_scanner.html',
         result=result,
         qr_data=qr_data
     )
+
 # ===============================
 # EMAIL PHISHING DETECTOR
 # ===============================
@@ -653,35 +687,23 @@ def email_scanner():
             'crypto reward',
             'bitcoin',
             'airdrop'
-
         ]
-
-        # KEYWORD DETECTION
 
         for keyword in phishing_keywords:
 
             if keyword.lower() in email_content.lower():
-
                 detected.append(keyword)
 
-        # URL EXTRACTION
-
-        urls = re.findall(r'https?://\\S+', email_content)
+        urls = re.findall(r'https?://\S+', email_content)
 
         for url in urls:
 
             if '.ru' in url or '.tk' in url or '.xyz' in url:
-
                 detected.append("Suspicious URL Found")
 
-        # FINAL RESULT
-
         if detected:
-
             result = "Phishing Email Detected"
-
         else:
-
             result = "Email Looks Safe"
 
     return render_template(
@@ -689,8 +711,10 @@ def email_scanner():
         result=result,
         detected=detected
     )
+
 # ===============================
 # MAIN
 # ===============================
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000)
