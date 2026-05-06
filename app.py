@@ -35,10 +35,10 @@ app.secret_key = 'cybershield_secret_key'
 # ===============================
 # MYSQL DATABASE CONFIGURATION
 # ===============================
-import os
 import mysql.connector
+import os
 
-try:
+def get_db():
     db = mysql.connector.connect(
         host=os.getenv("MYSQL_ADDON_HOST"),
         user=os.getenv("MYSQL_ADDON_USER"),
@@ -46,12 +46,7 @@ try:
         database=os.getenv("MYSQL_ADDON_DB"),
         port=int(os.getenv("MYSQL_ADDON_PORT", 3306))
     )
-
-    cursor = db.cursor(dictionary=True)
-    print("Database connected successfully!")
-
-except Exception as e:
-    print("Database connection failed:", e)
+    return db, db.cursor(dictionary=True)
 # ===============================
 # URL SCANNING FUNCTION
 # ===============================
