@@ -24,21 +24,28 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 # MYSQL DATABASE CONFIGURATION
 # ===============================
 
-# ===============================
-# MYSQL DATABASE CONFIGURATION
-# ===============================
-
 db = None
 cursor = None
 
 try:
 
+    DB_HOST = os.getenv("MYSQL_ADDON_HOST")
+    DB_USER = os.getenv("MYSQL_ADDON_USER")
+    DB_PASSWORD = os.getenv("MYSQL_ADDON_PASSWORD")
+    DB_NAME = os.getenv("MYSQL_ADDON_DB")
+    DB_PORT = os.getenv("MYSQL_ADDON_PORT")
+
+    print("HOST:", DB_HOST)
+    print("USER:", DB_USER)
+    print("DB:", DB_NAME)
+    print("PORT:", DB_PORT)
+
     db = mysql.connector.connect(
-        host=os.getenv("MYSQL_ADDON_HOST"),
-        user=os.getenv("MYSQL_ADDON_USER"),
-        password=os.getenv("MYSQL_ADDON_PASSWORD"),
-        database=os.getenv("MYSQL_ADDON_DB"),
-        port=int(os.getenv("MYSQL_ADDON_PORT", 3306))
+        host=DB_HOST,
+        user=DB_USER,
+        password=DB_PASSWORD,
+        database=DB_NAME,
+        port=int(DB_PORT)
     )
 
     cursor = db.cursor(dictionary=True)
@@ -48,7 +55,6 @@ try:
 except Exception as e:
 
     print("Database Connection Error:", e)
-
 # ===============================
 # OCR FUNCTION
 # ===============================
